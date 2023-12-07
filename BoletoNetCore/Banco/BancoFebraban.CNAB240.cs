@@ -147,5 +147,20 @@ namespace BoletoNetCore
         public virtual void LerDetalheRetornoCNAB240SegmentoA(ref Boleto boleto, string registro)
         {
         }
+
+        public virtual void LerDetalheRetornoCNAB240SegmentoE(ref SegmentoE segmentoE, string registro)
+        {
+            try
+            {
+                if (registro.Substring(13, 1) != "E")
+                    throw new Exception("Registro inválido. O detalhe não possuí as características do segmento E.");
+
+                segmentoE.LerDetalheSegmentoERetornoCNAB240(registro);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Erro ao processar arquivo de RETORNO - SEGMENTO E.", ex);
+            }
+        }
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
@@ -9,6 +10,7 @@ namespace BoletoNetCore
         public IBanco Banco { get; set; }
         public TipoArquivo TipoArquivo { get; set; }
         public Boletos Boletos { get; set; } = new Boletos();
+        public List<SegmentoE> SegmentoE { get; set; } = new List<SegmentoE>();
         public DateTime? DataGeracao { get; set; }
         public int? NumeroSequencial { get; set; }
 
@@ -155,6 +157,14 @@ namespace BoletoNetCore
                 var boleto = new Boleto(this.Banco, _ignorarCarteiraBoleto);
                 b.LerDetalheRetornoCNAB240SegmentoA(ref boleto, registro);
                 Boletos.Add(boleto);
+                return;
+            }
+            if (tipoRegistro == "3" & tipoSegmento == "E")
+            {
+                // Segmento A - Indica um novo boleto
+                var segmentoE = new SegmentoE();
+                b.LerDetalheRetornoCNAB240SegmentoE(ref segmentoE, registro);
+                SegmentoE.Add(segmentoE);
                 return;
             }
         }

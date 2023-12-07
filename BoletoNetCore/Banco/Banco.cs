@@ -23,7 +23,8 @@ namespace BoletoNetCore
             [748] = BancoSicredi.Instance,
             [756] = BancoSicoob.Instance,
             [097] = BancoCrediSIS.Instance,
-            [077] = BancoInter.Instance
+            [077] = BancoInter.Instance,
+            [637] = BancoSofisa.Instance
         };
 
         public static IBanco Instancia(int codigoBanco)
