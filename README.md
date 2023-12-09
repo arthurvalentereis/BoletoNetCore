@@ -13,6 +13,35 @@ Esta é uma versão baseado no Boleto2Net, mas para funcionar com .NET Core
 
 Foi criado um novo projeto para não quebrar a compatibilidade com aplicações que usam .NET inferior ao 4.6.1
 
+## Documentos
+### Banco do Brasil:
+https://bb.com.br/docs/pub/emp/empl/dwn/000Completo.pdf  (CNAB e Segmentos)
+https://www.bb.com.br/docs/pub/emp/empl/dwn/Doc3526SegtoE.pdf Conciliação bancária
+
+### Banco do Bradesco
+- [Todas documentações CNAB400/CNAB240/MT940](https://banco.bradesco/html/pessoajuridica/solucoes-integradas/outros/layout-de-arquivo.shtm)  
+- [MT 940 lastest version](https://banco.bradesco/assets/pessoajuridica/pdf/solucoes-integradas/outros/layout-de-arquivo/conciliacao_bancaria_mt940.pdf)
+- [CNAB240 Conciliação bancária](https://banco.bradesco/assets/pessoajuridica/pdf/solucoes-integradas/outros/layout-de-arquivo/conciliacao_bancaria_240_posicoes_v_5.pdf)
+
+### Santander
+- [Documentação Santander não possui conciliação](https://cms.santander.com.br/sites/WPS/documentos/arq-cobranca-portugues-jul22/22-07-14_131739_h7815-layout-cobranca-cnab-240-posicoes-padrao-santander-multibanco-julho-2022-v4.pdf)
+
+
+## Exemplos e artigos de parser MT940
+- [Artigo detalhado (inglês)](https://web.archive.org/web/20200618100100/https://deutschebank.nl/nl/docs/MT94042_EN.pdf)
+
+- [construtor de cada código do MT940](https://github.com/ksdev-pl/mbank-mt940-parser/blob/master/src/Mt940Parser.php) 
+
+-[possui exemplos do arquivo MT 940](https://github.com/mjebrahimi/SharpMt940Lib.Core/blob/master/Raptorious.SharpMt940Lib.Tests/Samples/abnamro.txt)
+
+SAP MT940 Documentation 
+https://blogs.sap.com/2020/06/29/steps-to-activate-electronic-bank-reconciliation-statement-mt940-format-part-i/ (Steps to Activate Electronic Bank Reconciliation Statement – MT940 Format – Part I)
+https://blogs.sap.com/2020/08/05/search-string-in-electronic-bank-reconciliation-mt940-format-part-ii/ (Search String in Electronic Bank Reconciliation – MT940 Format – Part II)
+
+
+Detalhamento dos Segmentos do modelo CNAB
+https://ajuda.wk.com.br/622/fn/03.Cadastros/03.03.Leiautes/03.03.02.Gerador_de_Leiautes_de_Arquivos_de_Remessa/CNAB_240_-_Gerador_de_Leiautes_de_Arquivos_de_Remessa.htm
+
 ### Carteiras Homologadas
 * Banrisul (041) - Carteira 1
 * Bradesco (237) - Carteira 09
