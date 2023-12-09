@@ -37,6 +37,21 @@ namespace BoletoNetCore
             arquivoRetorno.NumeroSequencial = Utils.ToInt32(registro.Substring(157, 6));
         }
 
+        public virtual void LerHeaderDeLoteRetornoCNAB240(ref HeaderDeLote  headerLote, string registro)
+        {
+            try
+            {
+                if (registro.Substring(8, 1) != "E")
+                    throw new Exception("Registro inválido. O detalhe não possuí as características do header de lote - segmento E.");
+
+                headerLote.LerHeaderDeLote(registro);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Erro ao processar arquivo de RETORNO - Header de Lote - Segmento E.", ex);
+            }
+        }
+
         public virtual void LerDetalheRetornoCNAB240SegmentoT(ref Boleto boleto, string registro)
         {
             try
@@ -162,5 +177,22 @@ namespace BoletoNetCore
                 throw new Exception("Erro ao processar arquivo de RETORNO - SEGMENTO E.", ex);
             }
         }
+
+        public virtual void LerTrailerDeLoteRetornoCNAB240(ref TrailerDeLote trailerLote, string registro)
+        {
+            try
+            {
+                if (registro.Substring(7, 1) != "5")
+                    throw new Exception("Registro inválido. O detalhe não possuí as características do trailer de lote - segmento E.");
+
+                trailerLote.LerTrailerDeLote(registro);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Erro ao processar arquivo de RETORNO - Trailer de Lote - SEGMENTO E.", ex);
+            }
+        }
+
+
     }
 }

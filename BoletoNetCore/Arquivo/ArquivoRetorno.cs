@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text;
 
 namespace BoletoNetCore
 {
@@ -10,9 +12,13 @@ namespace BoletoNetCore
         public IBanco Banco { get; set; }
         public TipoArquivo TipoArquivo { get; set; }
         public Boletos Boletos { get; set; } = new Boletos();
-        public List<SegmentoE> SegmentoE { get; set; } = new List<SegmentoE>();
+        public List<SegmentoE> ExtratoBancario { get; set; } = new List<SegmentoE>();
+        public HeaderDeLote HeaderDeLote { get; set; }
+        public TrailerDeLote TrailerDeLote { get; set; }
         public DateTime? DataGeracao { get; set; }
         public int? NumeroSequencial { get; set; }
+        public int? CodigoRemessa { get; set; }
+        public int? LayoutArquivo { get; set; }
 
         private bool _ignorarCarteiraBoleto = false;
 
@@ -66,7 +72,33 @@ namespace BoletoNetCore
             }
             return Boletos;
         }
+        public void GerarArquivoRemessaMT940(string filePath)
+        {
+            StringBuilder mt940Content = new StringBuilder();
 
+            // Cabeçalho
+            mt940Content.AppendLine("BSBSBRSP");
+            mt940Content.AppendLine($":20:{DataGeracao?.ToString("yyyyMMdd")}{CodigoRemessa}");
+            mt940Content.AppendLine($":25:{HeaderDeLote.AgenciaConta.ToString().PadLeft(5,'0')}" +
+                                        $"{HeaderDeLote.NumeroConta.ToString().PadLeft(12,'0')}" +
+                                        $"{HeaderDeLote.DigitoConta}");
+            mt940Content.AppendLine($":28C:{HeaderDeLote.SequenciaExtrato}");
+            mt940Content.AppendLine($":60F:{HeaderDeLote.SituacaoSaldoInicial}{HeaderDeLote.DataSaldoInicial?.ToString("yyMMdd")}BRL{HeaderDeLote.ValorSaldoInicial.ToString("0.00")}");
+
+            // Transações (exemplo fictício)
+            foreach (var transacao in ExtratoBancario)
+            {
+
+            mt940Content.AppendLine($":61:{transacao.DataLancamento.ToString("yyMMdd")}{transacao.DataContabil?.ToString("MMdd")}{(char)transacao.TipoLancamento}{HeaderDeLote.TipoMoeda.Substring(2,1)}{transacao.ValorLancamento.ToString("0.00")}{transacao.CodigoHistorico}{transacao.NumeroDocumentoComplemento}");
+            mt940Content.AppendLine($":86:{transacao.HistoricoLancamento}");
+            }
+
+            // Rodapé
+            mt940Content.AppendLine($":62F:{TrailerDeLote.SituacaoSaldoFinal}{TrailerDeLote.DataSaldoFinal?.ToString("yyMMdd")}BRL{TrailerDeLote.ValorSaldoFinal.ToString("0.00")}");
+
+            // Salva o conteúdo no arquivo
+            File.WriteAllText(filePath, mt940Content.ToString());
+        }
         private void LerArquivoRetorno2(Stream arquivo)
         {
 
@@ -131,6 +163,15 @@ namespace BoletoNetCore
                 return;
             }
 
+            if (tipoRegistro == "1")
+            {
+                // Segmento A - Indica um novo boleto
+                var headerLote = new HeaderDeLote();
+                b.LerHeaderDeLoteRetornoCNAB240(ref headerLote, registro);
+                HeaderDeLote = headerLote;
+                return;
+            }
+
             if (tipoRegistro == "3" & tipoSegmento == "T")
             {
                 // Segmento T - Indica um novo boleto
@@ -159,14 +200,26 @@ namespace BoletoNetCore
                 Boletos.Add(boleto);
                 return;
             }
+       
+
             if (tipoRegistro == "3" & tipoSegmento == "E")
             {
                 // Segmento A - Indica um novo boleto
                 var segmentoE = new SegmentoE();
                 b.LerDetalheRetornoCNAB240SegmentoE(ref segmentoE, registro);
-                SegmentoE.Add(segmentoE);
+                ExtratoBancario.Add(segmentoE);
                 return;
             }
+
+            if (tipoRegistro == "5")
+            {
+                // Segmento A - Indica um novo boleto
+                var trailerLote = new TrailerDeLote();
+                b.LerTrailerDeLoteRetornoCNAB240(ref trailerLote, registro);
+                TrailerDeLote = trailerLote;
+                return;
+            }
+
         }
 
         private void LerLinhaDoArquivoRetornoCNAB400(string registro)
@@ -242,6 +295,9 @@ namespace BoletoNetCore
             }
 
         }
+
+        
+
     }
 
 }

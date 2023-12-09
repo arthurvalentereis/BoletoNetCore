@@ -396,8 +396,10 @@ namespace BoletoNetCore
             arquivoRetorno.Banco.Beneficiario.ContaBancaria.Conta = registro.Substring(58, 12);
             arquivoRetorno.Banco.Beneficiario.ContaBancaria.DigitoConta = registro.Substring(71, 1);
 
+            arquivoRetorno.CodigoRemessa = Utils.ToInt32(registro.Substring(142, 1));
             arquivoRetorno.DataGeracao = Utils.ToDateTime(Utils.ToInt32(registro.Substring(143, 8)).ToString("##-##-####"));
             arquivoRetorno.NumeroSequencial = Utils.ToInt32(registro.Substring(157, 6));
+            arquivoRetorno.LayoutArquivo = Utils.ToInt32(registro.Substring(163, 3));
         }
 
         public override void LerDetalheRetornoCNAB240SegmentoA(ref Boleto boleto, string registro)
@@ -485,8 +487,6 @@ namespace BoletoNetCore
                 throw new Exception("Erro ao ler detalhe do arquivo de RETORNO / CNAB 240 / T.", ex);
             }
         }
-
-
 
         // Segmento U está no padrão Febraban - não foi necessario sobreescrever
 

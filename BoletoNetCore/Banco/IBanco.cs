@@ -124,6 +124,8 @@ namespace BoletoNetCore
             int numeroRegistroCobrancaDescontada, decimal valorCobrancaDescontada);
 
         void LerHeaderRetornoCNAB240(ArquivoRetorno arquivoRetorno, string registro);
+        void LerHeaderDeLoteRetornoCNAB240(ref HeaderDeLote headerLote, string regitro);
+        void LerTrailerDeLoteRetornoCNAB240(ref TrailerDeLote trailerLote, string regitro);
         void LerDetalheRetornoCNAB240SegmentoT(ref Boleto boleto, string registro);
         void LerDetalheRetornoCNAB240SegmentoU(ref Boleto boleto, string registro);
         void LerDetalheRetornoCNAB240SegmentoA(ref Boleto boleto, string regitro);

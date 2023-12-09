@@ -33,7 +33,10 @@ namespace BoletoNetCore.WebAPI.Controllers
                     // Agora você pode usar o stream para criar o ArquivoRetorno
                     ArquivoRetorno arquivoRetorno = new ArquivoRetorno(stream);
                     // Faça o que precisar com o arquivoRetorno
+                    string userFolderPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+                    string filePath = Path.Combine(userFolderPath, "exemplo_mt940.txt");
 
+                    arquivoRetorno.GerarArquivoRemessaMT940(filePath);
                     return Ok(arquivoRetorno);
                 }
             }
