@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using BoletoNetCore.Exceptions;
+using BoletoNetCore.LinkPagamento;
 using static System.String;
 
 namespace BoletoNetCore
@@ -12,6 +13,12 @@ namespace BoletoNetCore
         public string Token { get; set; }
 
         public Task ConsultarStatus(Boleto boleto)
+        {
+            throw new NotImplementedException();
+        }
+
+       
+        public Task<LinkPagamentoResponse> GerarLinkPagamento(LinkPagamentoRequest boleto)
         {
             throw new NotImplementedException();
         }

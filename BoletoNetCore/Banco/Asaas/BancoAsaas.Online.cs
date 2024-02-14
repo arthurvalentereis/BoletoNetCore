@@ -1,14 +1,15 @@
-using BoletoNetCore.LinkPagamento;
-using System;
-using System.Net;
-using System.Net.Http;
-using System.Net.Http.Headers;
+﻿using System;
 using System.Net.Http.Json;
+using System.Net.Http;
+using System.Net;
 using System.Threading.Tasks;
+using BoletoNetCore.LinkPagamento;
+using System.Collections.Generic;
+using System.Drawing;
 
 namespace BoletoNetCore
 {
-    partial class BancoSicredi : IBancoOnlineRest
+    partial class BancoAsaas : IBancoOnlineRest
     {
         #region HttpClient
         private HttpClient _httpClient;
@@ -19,7 +20,7 @@ namespace BoletoNetCore
                 if (this._httpClient == null)
                 {
                     this._httpClient = new HttpClient();
-                    this._httpClient.BaseAddress = new Uri("https://cobrancaonline.sicredi.com.br/sicredi-cobranca-ws-ecomm-api/ecomm/v1/boleto/");
+                    this._httpClient.BaseAddress = new Uri("https://sandbox.asaas.com/api/v3/");
                 }
 
                 return this._httpClient;
@@ -29,7 +30,7 @@ namespace BoletoNetCore
 
         #region Chaves de Acesso Api
 
-        // Chave Master que deve ser gerada pelo portal do sicredi
+        // Chave Master que deve ser gerada pelo portal do Asaas
         // Menu Cobrança, Sub Menu Lateral Código de Acesso / Gerar
         public string ChaveApi { get; set; }
 
@@ -40,25 +41,27 @@ namespace BoletoNetCore
 
         #endregion
 
-        public async Task<string> GerarToken()
+        public BancoAsaas(string chaveApi)
         {
-            var request = new HttpRequestMessage(HttpMethod.Post, "autenticacao");
-            request.Headers.Add("token", this.ChaveApi);
+            Codigo = 461;
+            Nome = "ASAAS";
+            Digito = "0";
+            ChaveApi = chaveApi;
+        }
 
-            var response = await this.httpClient.SendAsync(request);
-            await this.CheckHttpResponseError(response);
-            var ret = await response.Content.ReadFromJsonAsync<ChaveTransacaoSicrediApi>();
-            this.Token = ret.ChaveTransacao;
-            return ret.ChaveTransacao;
+        public Task<string> GerarToken()
+        {
+            this.Token = this.ChaveApi;
+            return Task.FromResult(this.Token);
         }
 
         public async Task RegistrarBoleto(Boleto boleto)
         {
-            var emissao = new EmissaoBoletoSicrediApi();
+            var emissao = new EmissaoBoletoAsaasApiRequest();
             emissao.Agencia = boleto.Banco.Beneficiario.ContaBancaria.Agencia;
             emissao.Posto = boleto.Banco.Beneficiario.ContaBancaria.DigitoAgencia;
             emissao.Cedente = boleto.Banco.Beneficiario.Codigo;
-            emissao.NossoNumero = boleto.NossoNumero+boleto.NossoNumeroDV;
+            emissao.NossoNumero = boleto.NossoNumero + boleto.NossoNumeroDV;
             emissao.TipoPessoa = boleto.Pagador.TipoCPFCNPJ("0");
             emissao.CpfCnpj = boleto.Pagador.CPFCNPJ;
             emissao.Nome = boleto.Pagador.Nome;
@@ -94,14 +97,14 @@ namespace BoletoNetCore
             emissao.Mensagem = boleto.MensagemInstrucoesCaixaFormatado;
             emissao.NumDiasNegativacaoAuto = boleto.DiasProtesto;
 
-            var request = new HttpRequestMessage(HttpMethod.Post, "emissao");
-            request.Headers.Add("token", this.Token);
+            var request = new HttpRequestMessage(HttpMethod.Post, "payments");
+            request.Headers.Add("access_token", this.Token);
             request.Content = JsonContent.Create(emissao);
             var response = await this.httpClient.SendAsync(request);
             await this.CheckHttpResponseError(response);
 
-            // todo: verificar a necessidade de preencher dados do boleto com o retorno do sicredi
-            var boletoEmitido = await response.Content.ReadFromJsonAsync<BoletoEmitidoSicrediApi>();
+            // todo: verificar a necessidade de preencher dados do boleto com o retorno do Asaas
+            var boletoEmitido = await response.Content.ReadFromJsonAsync<BoletoEmitidoAsaasApi>();
             boletoEmitido.LinhaDigitável.ToString();
             boletoEmitido.CodigoBarra.ToString();
         }
@@ -113,7 +116,7 @@ namespace BoletoNetCore
 
             if (response.StatusCode == HttpStatusCode.BadRequest || (response.StatusCode == HttpStatusCode.NotFound && response.Content.Headers.ContentType.MediaType == "application/json"))
             {
-                var bad = await response.Content.ReadFromJsonAsync<BadRequestSicrediApi>();
+                var bad = await response.Content.ReadFromJsonAsync<BadRequestAsaasApi>();
                 throw new Exception(string.Format("{0} {1}", bad.Parametro, bad.Mensagem).Trim());
             }
             else
@@ -125,7 +128,7 @@ namespace BoletoNetCore
             var agencia = boleto.Banco.Beneficiario.ContaBancaria.Agencia;
             var posto = boleto.Banco.Beneficiario.ContaBancaria.DigitoAgencia;
             var cedente = boleto.Banco.Beneficiario.Codigo;
-            var nossoNumero = boleto.NossoNumero+boleto.NossoNumeroDV;
+            var nossoNumero = boleto.NossoNumero + boleto.NossoNumeroDV;
 
             // existem outros parametros no manual para consulta de multiplos boletos
             var url = string.Format("consulta?agencia={0}&cedente={1}&posto={2}&nossoNumero={3}", agencia, cedente, posto, nossoNumero);
@@ -134,21 +137,56 @@ namespace BoletoNetCore
             request.Headers.Add("token", this.Token);
             var response = await this.httpClient.SendAsync(request);
             await this.CheckHttpResponseError(response);
-            var ret = await response.Content.ReadFromJsonAsync<RetornoConsultaBoletoSicrediApi[]>();
+            var ret = await response.Content.ReadFromJsonAsync<RetornoConsultaBoletoAsaasApi[]>();
 
             // todo: verificar quais dados necessarios para preencher boleto
             ret[0].Situacao.ToString();
         }
 
-        public Task<LinkPagamentoResponse> GerarLinkPagamento(LinkPagamentoRequest boleto)
+        public async Task<LinkPagamentoResponse> GerarLinkPagamento(LinkPagamentoRequest linkPagamento)
         {
-            throw new NotImplementedException();
+            var linkPagamentoResponse = new LinkPagamentoResponse();
+
+            var linkPagamentoAsaasRequest = new LinkPagamentoAsaasRequest();
+
+            linkPagamentoAsaasRequest.endDate = linkPagamento.DataFinalLink.ToString("yyyy-mm-dd");
+            linkPagamentoAsaasRequest.name = linkPagamento.NomeLinkCobranca;
+            linkPagamentoAsaasRequest.name = linkPagamento.NomeLinkCobranca;
+            linkPagamentoAsaasRequest.description = linkPagamento.Descricao;
+            linkPagamentoAsaasRequest.billingType = linkPagamento.TipoCobranca;
+            linkPagamentoAsaasRequest.chargeType = linkPagamento.FormaCobranca;
+            linkPagamentoAsaasRequest.value = linkPagamento.Valor;
+            linkPagamentoAsaasRequest.dueDateLimitDays = linkPagamento.DataVencimentoLimite.ToString("yyyy-mm-dd");
+            linkPagamentoAsaasRequest.subscriptionCycle = linkPagamento.PeriodicidadeCobranca;
+            linkPagamentoAsaasRequest.maxInstallmentCount = linkPagamento.QuantidadeMaximaParcelamento;
+            linkPagamentoAsaasRequest.notificationEnabled = linkPagamento.HabilitaNotificacao;
+            linkPagamentoAsaasRequest.callback = new LinkPagamentoAsaasCallbackRequest()
+            {
+                autoRedirect = linkPagamento.RedicionarAutomaticamente,
+                successUrl = linkPagamento.UrlPagamentoSucesso
+            };
+
+
+
+            var request = new HttpRequestMessage(HttpMethod.Post, "paymentLinks");
+            request.Headers.Add("accept", "application/json");
+            request.Headers.Add("access_token", this.Token);
+            request.Content = JsonContent.Create(linkPagamentoAsaasRequest);
+            var response = await this.httpClient.SendAsync(request);
+            await this.CheckHttpResponseError(response);
+
+            var ret = await response.Content.ReadFromJsonAsync<LinkPagamentoAsaasResponse>();
+
+            // todo: verificar quais dados necessarios para preencher link de pagamento
+
+            return linkPagamentoResponse;
+
         }
     }
 
-    #region Classes Auxiliares (json) Sicredi
+    #region Classes Auxiliares (json) Asaas
 
-    class InstrucaoSicrediApi
+    class InstrucaoAsaasApi
     {
         public string Agencia { get; set; }
         public string Posto { get; set; }
@@ -179,20 +217,20 @@ namespace BoletoNetCore
         public string ComplementoInstrucao { get; set; }
     }
 
-    class BadRequestSicrediApi
+    class BadRequestAsaasApi
     {
         public string Codigo { get; set; }
         public string Mensagem { get; set; }
         public string Parametro { get; set; }
     }
 
-    class ChaveTransacaoSicrediApi
+    class ChaveTransacaoAsaasApi
     {
         public string ChaveTransacao { get; set; }
         public DateTime dataExpiracao { get; set; }
     }
 
-    class RetornoConsultaBoletoSicrediApi
+    class RetornoConsultaBoletoAsaasApi
     {
         public string SeuNumero { get; set; }
         public string NossoNumero { get; set; }
@@ -205,7 +243,7 @@ namespace BoletoNetCore
         public string Situacao { get; set; }
     }
 
-    class BoletoEmitidoSicrediApi
+    class BoletoEmitidoAsaasApi
     {
         public string LinhaDigitável { get; set; }
         public string CodigoBanco { get; set; }
@@ -235,7 +273,7 @@ namespace BoletoNetCore
         public string CodigoBarra { get; set; }
     }
 
-    class EmissaoBoletoSicrediApi
+    class EmissaoBoletoAsaasApiRequest
     {
         public string Agencia { get; set; }
         public string Posto { get; set; }

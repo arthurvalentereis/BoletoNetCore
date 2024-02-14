@@ -16,5 +16,7 @@ namespace BoletoNetCore
         Sicoob = 756,
         CrediSIS = 097,
         BancoInter = 077,
+        Sofisa = 637,
+        Asaas = 461,
     }
 }

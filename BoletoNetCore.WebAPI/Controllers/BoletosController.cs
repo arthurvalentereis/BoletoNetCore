@@ -45,6 +45,8 @@ namespace BoletoNetCore.WebAPI.Controllers
         /// - Bradesco = 237
         /// - Itau = 341
         /// - Safra = 422
+        /// - Asaas = 461
+        /// - Sofisa = 637
         /// - Sicredi = 748
         /// - Sicoob = 756
         /// </remarks>
@@ -74,6 +76,93 @@ namespace BoletoNetCore.WebAPI.Controllers
                 var htmlBoleto = gerarBoletoBancos.RetornarHtmlBoleto(dadosBoleto);
 
                 return Content(htmlBoleto, "text/html");
+            }
+            catch (Exception ex)
+            {
+                var retorno = metodosUteis.RetornarErroPersonalizado((int)HttpStatusCode.InternalServerError, "Requisição Inválida", $"Detalhe do erro: {ex.Message}", string.Empty);
+                return StatusCode(StatusCodes.Status500InternalServerError, retorno);
+            }
+        }
+
+        /// <summary>
+        /// Endpoint para registrar boleto via webservice no banco.
+        /// </summary>
+        /// <remarks>
+        /// ## Tipo de banco emissor
+        /// O tipo de banco e chave API deve ser informado dentro do parâmetro para que nossa API possa identificar de que banco se trata
+        /// - Itau = 341
+        /// - Asaas = 461
+        /// - Sicredi = 748
+        /// ## Tipo Cobrança
+        /// Defina como será cobrado
+        /// - Cartão de crédito = CREDIT_CARD
+        /// - Boleto = BOLETO
+        /// - PIX = PIX
+        /// - Link Pagamento = LINK
+        /// </remarks>
+        /// <returns>Retornar o HTML do boleto.</returns>
+        [ProducesResponseType(typeof(DadosBoleto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+        [HttpPost("GerarCobranca")]
+        public IActionResult GerarCobranca(DadosLinkCobranca dadosBoleto, int tipoBancoEmissor, string tipoCobranca, string chaveApi)
+        {
+            try
+            {
+                if (dadosBoleto.BeneficiarioResponse.CPFCNPJ == null || (dadosBoleto.BeneficiarioResponse.CPFCNPJ.Length != 11 && dadosBoleto.BeneficiarioResponse.CPFCNPJ.Length != 14))
+                {
+                    var retorno = metodosUteis.RetornarErroPersonalizado((int)HttpStatusCode.BadRequest, "Requisição Inválida", "CPF/CNPJ inválido: Utilize 11 dígitos para CPF ou 14 para CNPJ.", "/api/Boletos/BoletoItau");
+                    return BadRequest(retorno);
+                }
+
+                if (string.IsNullOrWhiteSpace(dadosBoleto.BeneficiarioResponse.ContaBancariaResponse.CarteiraPadrao))
+                {
+                    var retorno = metodosUteis.RetornarErroPersonalizado((int)HttpStatusCode.BadRequest, "Requisição Inválida", "Favor informar a carteira do banco.", "/api/Boletos/BoletoItau");
+                    return BadRequest(retorno);
+                }
+
+                switch (tipoCobranca)
+                {
+                    case "LINK":
+                        var banco = Banco.Instancia(metodosUteis.RetornarBancoEmissor(tipoBancoEmissor));
+                        IBancoOnlineRest b = (IBancoOnlineRest)banco;
+                        b.ChaveApi = chaveApi;
+                        b.GerarToken();
+
+                        var request = new LinkPagamentoRequest(banco);
+
+                        request.DataFinalLink = dadosBoleto.DataFinalLink;
+                        request.NomeLinkCobranca = dadosBoleto.NomeLinkCobranca;
+                        request.NomeLinkCobranca = dadosBoleto.NomeLinkCobranca;
+                        request.Descricao = dadosBoleto.Descricao;
+                        request.TipoCobranca = dadosBoleto.TipoCobranca;
+                        request.FormaCobranca = dadosBoleto.FormaCobranca;
+                        request.Valor = dadosBoleto.Valor;
+                        request.DataVencimentoLimite = dadosBoleto.DataVencimentoLimite;
+                        request.DataFinalLink = dadosBoleto.DataFinalLink;
+                        request.PeriodicidadeCobranca = dadosBoleto.PeriodicidadeCobranca;
+                        request.QuantidadeMaximaParcelamento = dadosBoleto.QuantidadeMaxParcelamento;
+                        request.HabilitaNotificacao = dadosBoleto.HabilitaNotificacao;
+                        request.UrlPagamentoSucesso = dadosBoleto.UrlPagamentoSucesso;
+                        request.RedicionarAutomaticamente = dadosBoleto.RedicionarAutomaticamente;
+
+                        var retorno = b.GerarLinkPagamento(request);
+                        break;
+                    case "CREDIT_CARD":
+                        break;
+                    case "PIX":
+                        break;
+                    case "BOLETO":
+                        GerarBoletoBancos gerarBoletoBancos = new GerarBoletoBancos(Banco.Instancia(metodosUteis.RetornarBancoEmissor(tipoBancoEmissor)));
+                        //var htmlBoleto = gerarBoletoBancos.RetornarHtmlBoleto(dadosBoleto);
+
+                        break;
+                    default:
+                        break;
+                }
+
+              
+                return Ok();
             }
             catch (Exception ex)
             {
