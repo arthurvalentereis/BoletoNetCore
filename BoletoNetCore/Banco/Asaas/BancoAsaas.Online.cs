@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using BoletoNetCore.LinkPagamento;
 using System.Collections.Generic;
 using System.Drawing;
+using BoletoNetCore.Extensions;
 
 namespace BoletoNetCore
 {
@@ -116,6 +117,7 @@ namespace BoletoNetCore
 
             if (response.StatusCode == HttpStatusCode.BadRequest || (response.StatusCode == HttpStatusCode.NotFound && response.Content.Headers.ContentType.MediaType == "application/json"))
             {
+                var teste = response.Content.ReadAsStringAsync();
                 var bad = await response.Content.ReadFromJsonAsync<BadRequestAsaasApi>();
                 throw new Exception(string.Format("{0} {1}", bad.Parametro, bad.Mensagem).Trim());
             }
@@ -145,18 +147,15 @@ namespace BoletoNetCore
 
         public async Task<LinkPagamentoResponse> GerarLinkPagamento(LinkPagamentoRequest linkPagamento)
         {
-            var linkPagamentoResponse = new LinkPagamentoResponse();
 
             var linkPagamentoAsaasRequest = new LinkPagamentoAsaasRequest();
-
-            linkPagamentoAsaasRequest.endDate = linkPagamento.DataFinalLink.ToString("yyyy-mm-dd");
-            linkPagamentoAsaasRequest.name = linkPagamento.NomeLinkCobranca;
+            linkPagamentoAsaasRequest.endDate = linkPagamento.DataFinalLink.ToString("yyyy-MM-dd");
             linkPagamentoAsaasRequest.name = linkPagamento.NomeLinkCobranca;
             linkPagamentoAsaasRequest.description = linkPagamento.Descricao;
-            linkPagamentoAsaasRequest.billingType = linkPagamento.TipoCobranca;
-            linkPagamentoAsaasRequest.chargeType = linkPagamento.FormaCobranca;
+            linkPagamentoAsaasRequest.billingType = linkPagamento.FormaCobranca;
+            linkPagamentoAsaasRequest.chargeType = linkPagamento.TipoCobranca;
             linkPagamentoAsaasRequest.value = linkPagamento.Valor;
-            linkPagamentoAsaasRequest.dueDateLimitDays = linkPagamento.DataVencimentoLimite.ToString("yyyy-mm-dd");
+            linkPagamentoAsaasRequest.dueDateLimitDays = linkPagamento.DataVencimentoLimite;
             linkPagamentoAsaasRequest.subscriptionCycle = linkPagamento.PeriodicidadeCobranca;
             linkPagamentoAsaasRequest.maxInstallmentCount = linkPagamento.QuantidadeMaximaParcelamento;
             linkPagamentoAsaasRequest.notificationEnabled = linkPagamento.HabilitaNotificacao;
@@ -177,7 +176,24 @@ namespace BoletoNetCore
 
             var ret = await response.Content.ReadFromJsonAsync<LinkPagamentoAsaasResponse>();
 
-            // todo: verificar quais dados necessarios para preencher link de pagamento
+            var linkPagamentoResponse = new LinkPagamentoResponse();
+            // todo: verificar quais dados necessarios para preencher linkpagamentoresponse
+            linkPagamentoResponse.Id = ret.id;
+            linkPagamentoResponse.FormaPagamento = ret.billingType;
+            linkPagamentoResponse.FormaCobranca = ret.chargeType;
+            linkPagamentoResponse.UrlLink = ret.url;
+            linkPagamentoResponse.NomeLink = ret.name;
+            linkPagamentoResponse.StatusLink = ret.active;
+            linkPagamentoResponse.DataFinal = ret.endDate;
+            linkPagamentoResponse.Descricao = ret.description;
+            linkPagamentoResponse.Deletado = ret.deleted;
+            linkPagamentoResponse.Visualizacoes = ret.viewCount;
+            linkPagamentoResponse.Valor = ret.value;
+            linkPagamentoResponse.Periodicidade = ret.subscriptionCycle;
+            linkPagamentoResponse.QtdMaximaParcelas = ret.maxInstallmentCount;
+            linkPagamentoResponse.DiasUteisBoleto = ret.dueDateLimitDays;
+            linkPagamentoResponse.NotificacaoAtivada = ret.notificationEnabled;
+
 
             return linkPagamentoResponse;
 

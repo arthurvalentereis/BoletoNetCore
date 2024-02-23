@@ -34,7 +34,7 @@ namespace BoletoNetCore
         /// <summary>
         /// Em caso de boleto, define a quantidade de dias úteis que o seu cliente poderá pagar o boleto após gerado
         /// </summary>
-        public DateTime DataVencimentoLimite { get; set; }
+        public string DataVencimentoLimite { get; set; }
         public DateTime DataFinalLink { get; set; }
 
         /// <summary>

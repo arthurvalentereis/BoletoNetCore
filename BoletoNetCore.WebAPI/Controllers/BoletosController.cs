@@ -1,4 +1,5 @@
-﻿using BoletoNetCore.WebAPI.Extensions;
+﻿using BoletoNetCore.LinkPagamento;
+using BoletoNetCore.WebAPI.Extensions;
 using BoletoNetCore.WebAPI.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -105,22 +106,22 @@ namespace BoletoNetCore.WebAPI.Controllers
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         [HttpPost("GerarCobranca")]
-        public IActionResult GerarCobranca(DadosLinkCobranca dadosBoleto, int tipoBancoEmissor, string tipoCobranca, string chaveApi)
+        public async Task<IActionResult> GerarCobranca(DadosLinkCobranca dadosBoleto, int tipoBancoEmissor, string tipoCobranca, string chaveApi)
         {
             try
             {
-                if (dadosBoleto.BeneficiarioResponse.CPFCNPJ == null || (dadosBoleto.BeneficiarioResponse.CPFCNPJ.Length != 11 && dadosBoleto.BeneficiarioResponse.CPFCNPJ.Length != 14))
-                {
-                    var retorno = metodosUteis.RetornarErroPersonalizado((int)HttpStatusCode.BadRequest, "Requisição Inválida", "CPF/CNPJ inválido: Utilize 11 dígitos para CPF ou 14 para CNPJ.", "/api/Boletos/BoletoItau");
-                    return BadRequest(retorno);
-                }
+                //if (dadosBoleto.BeneficiarioResponse.CPFCNPJ == null || (dadosBoleto.BeneficiarioResponse.CPFCNPJ.Length != 11 && dadosBoleto.BeneficiarioResponse.CPFCNPJ.Length != 14))
+                //{
+                //    var retorno = metodosUteis.RetornarErroPersonalizado((int)HttpStatusCode.BadRequest, "Requisição Inválida", "CPF/CNPJ inválido: Utilize 11 dígitos para CPF ou 14 para CNPJ.", "/api/Boletos/BoletoItau");
+                //    return BadRequest(retorno);
+                //}
 
-                if (string.IsNullOrWhiteSpace(dadosBoleto.BeneficiarioResponse.ContaBancariaResponse.CarteiraPadrao))
-                {
-                    var retorno = metodosUteis.RetornarErroPersonalizado((int)HttpStatusCode.BadRequest, "Requisição Inválida", "Favor informar a carteira do banco.", "/api/Boletos/BoletoItau");
-                    return BadRequest(retorno);
-                }
-
+                //if (string.IsNullOrWhiteSpace(dadosBoleto.BeneficiarioResponse.ContaBancariaResponse.CarteiraPadrao))
+                //{
+                //    var retorno = metodosUteis.RetornarErroPersonalizado((int)HttpStatusCode.BadRequest, "Requisição Inválida", "Favor informar a carteira do banco.", "/api/Boletos/BoletoItau");
+                //    return BadRequest(retorno);
+                //}
+                var retorno = new LinkPagamentoResponse();
                 switch (tipoCobranca)
                 {
                     case "LINK":
@@ -132,7 +133,6 @@ namespace BoletoNetCore.WebAPI.Controllers
                         var request = new LinkPagamentoRequest(banco);
 
                         request.DataFinalLink = dadosBoleto.DataFinalLink;
-                        request.NomeLinkCobranca = dadosBoleto.NomeLinkCobranca;
                         request.NomeLinkCobranca = dadosBoleto.NomeLinkCobranca;
                         request.Descricao = dadosBoleto.Descricao;
                         request.TipoCobranca = dadosBoleto.TipoCobranca;
@@ -146,7 +146,7 @@ namespace BoletoNetCore.WebAPI.Controllers
                         request.UrlPagamentoSucesso = dadosBoleto.UrlPagamentoSucesso;
                         request.RedicionarAutomaticamente = dadosBoleto.RedicionarAutomaticamente;
 
-                        var retorno = b.GerarLinkPagamento(request);
+                        retorno = await b.GerarLinkPagamento(request);
                         break;
                     case "CREDIT_CARD":
                         break;
@@ -162,7 +162,7 @@ namespace BoletoNetCore.WebAPI.Controllers
                 }
 
               
-                return Ok();
+                return Ok(retorno);
             }
             catch (Exception ex)
             {
