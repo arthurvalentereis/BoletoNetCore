@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using BoletoNetCore.CartãoDeCredito;
 using BoletoNetCore.Exceptions;
 using BoletoNetCore.LinkPagamento;
 using static System.String;
@@ -19,6 +20,11 @@ namespace BoletoNetCore
 
        
         public Task<LinkPagamentoResponse> GerarLinkPagamento(LinkPagamentoRequest boleto)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<Payment> GerarCobrancaCartao(RequestCreditCard boleto)
         {
             throw new NotImplementedException();
         }

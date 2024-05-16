@@ -1,3 +1,4 @@
+using BoletoNetCore.CartãoDeCredito;
 using BoletoNetCore.LinkPagamento;
 using System;
 using System.Net;
@@ -138,6 +139,13 @@ namespace BoletoNetCore
 
             // todo: verificar quais dados necessarios para preencher boleto
             ret[0].Situacao.ToString();
+        }
+
+       
+
+        public Task<Payment> GerarCobrancaCartao(RequestCreditCard boleto)
+        {
+            throw new NotImplementedException();
         }
 
         public Task<LinkPagamentoResponse> GerarLinkPagamento(LinkPagamentoRequest boleto)

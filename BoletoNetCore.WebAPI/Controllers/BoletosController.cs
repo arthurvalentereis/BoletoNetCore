@@ -3,7 +3,9 @@ using BoletoNetCore.WebAPI.Extensions;
 using BoletoNetCore.WebAPI.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json.Linq;
 using System.Net;
+using System.Text.Json;
 
 namespace BoletoNetCore.WebAPI.Controllers
 {
@@ -121,34 +123,38 @@ namespace BoletoNetCore.WebAPI.Controllers
                 //    var retorno = metodosUteis.RetornarErroPersonalizado((int)HttpStatusCode.BadRequest, "Requisição Inválida", "Favor informar a carteira do banco.", "/api/Boletos/BoletoItau");
                 //    return BadRequest(retorno);
                 //}
-                var retorno = new LinkPagamentoResponse();
+                //var retorno = new LinkPagamentoResponse();
+                var banco = Banco.Instancia(metodosUteis.RetornarBancoEmissor(tipoBancoEmissor));
+                IBancoOnlineRest b = (IBancoOnlineRest)banco;
+                b.ChaveApi = chaveApi;
+                b.GerarToken();
                 switch (tipoCobranca)
                 {
                     case "LINK":
-                        var banco = Banco.Instancia(metodosUteis.RetornarBancoEmissor(tipoBancoEmissor));
-                        IBancoOnlineRest b = (IBancoOnlineRest)banco;
-                        b.ChaveApi = chaveApi;
-                        b.GerarToken();
+                       
 
                         var request = new LinkPagamentoRequest(banco);
 
-                        request.DataFinalLink = dadosBoleto.DataFinalLink;
-                        request.NomeLinkCobranca = dadosBoleto.NomeLinkCobranca;
-                        request.Descricao = dadosBoleto.Descricao;
-                        request.TipoCobranca = dadosBoleto.TipoCobranca;
-                        request.FormaCobranca = dadosBoleto.FormaCobranca;
-                        request.Valor = dadosBoleto.Valor;
-                        request.DataVencimentoLimite = dadosBoleto.DataVencimentoLimite;
-                        request.DataFinalLink = dadosBoleto.DataFinalLink;
-                        request.PeriodicidadeCobranca = dadosBoleto.PeriodicidadeCobranca;
-                        request.QuantidadeMaximaParcelamento = dadosBoleto.QuantidadeMaxParcelamento;
-                        request.HabilitaNotificacao = dadosBoleto.HabilitaNotificacao;
-                        request.UrlPagamentoSucesso = dadosBoleto.UrlPagamentoSucesso;
-                        request.RedicionarAutomaticamente = dadosBoleto.RedicionarAutomaticamente;
+                        request.DataFinalLink = dadosBoleto.linkPagamento.DataFinalLink;
+                        request.NomeLinkCobranca = dadosBoleto.linkPagamento.NomeLinkCobranca;
+                        request.Descricao = dadosBoleto.linkPagamento.Descricao;
+                        request.TipoCobranca = dadosBoleto.linkPagamento.TipoCobranca;
+                        request.FormaCobranca = dadosBoleto.linkPagamento.FormaCobranca;
+                        request.Valor = dadosBoleto.linkPagamento.Valor;
+                        request.DataVencimentoLimite = dadosBoleto.linkPagamento.DataVencimentoLimite;
+                        request.DataFinalLink = dadosBoleto.linkPagamento.DataFinalLink;
+                        request.PeriodicidadeCobranca = dadosBoleto.linkPagamento.PeriodicidadeCobranca;
+                       // request.QuantidadeMaximaParcelamento = dadosBoleto.linkPagamento.QuantidadeMaxParcelamento;
+                        request.HabilitaNotificacao = dadosBoleto.linkPagamento.HabilitaNotificacao;
+                        request.UrlPagamentoSucesso = dadosBoleto.linkPagamento.UrlPagamentoSucesso;
+                        request.RedicionarAutomaticamente = dadosBoleto.linkPagamento.RedicionarAutomaticamente;
 
-                        retorno = await b.GerarLinkPagamento(request);
+                       var retornoLink = await b.GerarLinkPagamento(request);
+                        return Ok(retornoLink);
                         break;
                     case "CREDIT_CARD":
+                         var retornoCard = await b.GerarCobrancaCartao(dadosBoleto.RequestCreditCard);
+                        return Ok(retornoCard);
                         break;
                     case "PIX":
                         break;
@@ -162,13 +168,15 @@ namespace BoletoNetCore.WebAPI.Controllers
                 }
 
               
-                return Ok(retorno);
+                return Ok();
             }
             catch (Exception ex)
             {
                 var retorno = metodosUteis.RetornarErroPersonalizado((int)HttpStatusCode.InternalServerError, "Requisição Inválida", $"Detalhe do erro: {ex.Message}", string.Empty);
-                return StatusCode(StatusCodes.Status500InternalServerError, retorno);
+                return StatusCode(StatusCodes.Status400BadRequest, retorno);
             }
         }
+        
+        
     }
 }

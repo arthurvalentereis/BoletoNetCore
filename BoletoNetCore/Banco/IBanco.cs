@@ -1,3 +1,4 @@
+using BoletoNetCore.CartãoDeCredito;
 using BoletoNetCore.LinkPagamento;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -182,5 +183,6 @@ namespace BoletoNetCore
         Task RegistrarBoleto(Boleto boleto);
         Task ConsultarStatus(Boleto boleto);
         Task<LinkPagamentoResponse> GerarLinkPagamento(LinkPagamentoRequest boleto);
+        Task<Payment> GerarCobrancaCartao(RequestCreditCard boleto);
     }
 }

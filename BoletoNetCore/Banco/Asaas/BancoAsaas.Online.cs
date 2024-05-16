@@ -7,6 +7,9 @@ using BoletoNetCore.LinkPagamento;
 using System.Collections.Generic;
 using System.Drawing;
 using BoletoNetCore.Extensions;
+using BoletoNetCore.CartãoDeCredito;
+using BoletoNetCore.Clientes;
+using System.Linq;
 
 namespace BoletoNetCore
 {
@@ -118,8 +121,8 @@ namespace BoletoNetCore
             if (response.StatusCode == HttpStatusCode.BadRequest || (response.StatusCode == HttpStatusCode.NotFound && response.Content.Headers.ContentType.MediaType == "application/json"))
             {
                 var teste = response.Content.ReadAsStringAsync();
-                var bad = await response.Content.ReadFromJsonAsync<BadRequestAsaasApi>();
-                throw new Exception(string.Format("{0} {1}", bad.Parametro, bad.Mensagem).Trim());
+                var bad = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+                throw new Exception(string.Format("{0} {1}", bad.Errors[0].Code, bad.Errors[0].Description).Trim());
             }
             else
                 throw new Exception(string.Format("Erro desconhecido: {0}", response.StatusCode));
@@ -198,6 +201,49 @@ namespace BoletoNetCore
             return linkPagamentoResponse;
 
         }
+        public async Task<Payment> GerarCobrancaCartao(RequestCreditCard requestCreditCard)
+        {
+            
+                var requestCustomer = new HttpRequestMessage(HttpMethod.Get, "customers?cpfCnpj=" + requestCreditCard.CreditCardHolderInfo.CpfCnpj);
+                requestCustomer.Headers.Add("accept", "application/json");
+                requestCustomer.Headers.Add("access_token", this.Token);
+                var responseCustomer = await this.httpClient.SendAsync(requestCustomer);
+                var retor = await responseCustomer.Content.ReadFromJsonAsync<CustomerList>();
+                var customer = "";
+
+                if (retor.Data.Count == 0)
+                    customer = AddCustomer(requestCreditCard.CreditCardHolderInfo).Result.Id;
+
+                if (retor.Data.Count > 0)
+                    customer = retor.Data.FirstOrDefault().Id;
+
+                requestCreditCard.Customer = customer;
+
+
+
+                var request = new HttpRequestMessage(HttpMethod.Post, "payments");
+                request.Headers.Add("accept", "application/json");
+                request.Headers.Add("access_token", this.Token);
+                request.Content = JsonContent.Create(requestCreditCard);
+                var response = await this.httpClient.SendAsync(request);
+                await this.CheckHttpResponseError(response);
+
+                var ret = await response.Content.ReadFromJsonAsync<Payment>();
+                return ret;
+
+        }
+        private async Task<Customer> AddCustomer(CreditCardHolderInfo request)
+        {
+            var requestCustomer = new HttpRequestMessage(HttpMethod.Post, "customers");
+            requestCustomer.Headers.Add("accept", "application/json");
+            requestCustomer.Headers.Add("access_token", this.Token);
+            requestCustomer.Content = JsonContent.Create(request);
+            var response = await this.httpClient.SendAsync(requestCustomer);
+            await this.CheckHttpResponseError(response);
+
+            var ret = await response.Content.ReadFromJsonAsync<Customer>();
+            return ret;
+        }
     }
 
     #region Classes Auxiliares (json) Asaas
@@ -238,6 +284,16 @@ namespace BoletoNetCore
         public string Codigo { get; set; }
         public string Mensagem { get; set; }
         public string Parametro { get; set; }
+    }
+    class Error
+    {
+        public string Code { get; set; }
+        public string Description { get; set; }
+    }
+
+    class ErrorResponse
+    {
+        public List<Error> Errors { get; set; }
     }
 
     class ChaveTransacaoAsaasApi
