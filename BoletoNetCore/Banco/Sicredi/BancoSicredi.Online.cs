@@ -143,12 +143,21 @@ namespace BoletoNetCore
 
        
 
-        public Task<Payment> GerarCobrancaCartao(RequestCreditCard boleto)
+        public Task<PaymentCreditCardResponse> GerarCobrancaCartao(RequestCobranca boleto)
         {
             throw new NotImplementedException();
         }
 
         public Task<LinkPagamentoResponse> GerarLinkPagamento(LinkPagamentoRequest boleto)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<BankSlip> GerarCobrancaBoleto(RequestCobranca boleto)
+        {
+            throw new NotImplementedException();
+        }
+        public Task<Pix> GerarPix(string idCobranca)
         {
             throw new NotImplementedException();
         }

@@ -201,25 +201,18 @@ namespace BoletoNetCore
             return linkPagamentoResponse;
 
         }
-        public async Task<Payment> GerarCobrancaCartao(RequestCreditCard requestCreditCard)
+        public async Task<PaymentCreditCardResponse> GerarCobrancaCartao(RequestCobranca requestCreditCard)
         {
-            
-                var requestCustomer = new HttpRequestMessage(HttpMethod.Get, "customers?cpfCnpj=" + requestCreditCard.CreditCardHolderInfo.CpfCnpj);
-                requestCustomer.Headers.Add("accept", "application/json");
-                requestCustomer.Headers.Add("access_token", this.Token);
-                var responseCustomer = await this.httpClient.SendAsync(requestCustomer);
-                var retor = await responseCustomer.Content.ReadFromJsonAsync<CustomerList>();
                 var customer = "";
+                var retor = await VerificaCustomer(requestCreditCard.CustomerInfo.CpfCnpj);
 
                 if (retor.Data.Count == 0)
-                    customer = AddCustomer(requestCreditCard.CreditCardHolderInfo).Result.Id;
+                    customer = AddCustomer(requestCreditCard.CustomerInfo).Result.Id;
 
                 if (retor.Data.Count > 0)
                     customer = retor.Data.FirstOrDefault().Id;
 
                 requestCreditCard.Customer = customer;
-
-
 
                 var request = new HttpRequestMessage(HttpMethod.Post, "payments");
                 request.Headers.Add("accept", "application/json");
@@ -228,11 +221,53 @@ namespace BoletoNetCore
                 var response = await this.httpClient.SendAsync(request);
                 await this.CheckHttpResponseError(response);
 
-                var ret = await response.Content.ReadFromJsonAsync<Payment>();
+                var ret = await response.Content.ReadFromJsonAsync<PaymentCreditCardResponse>();
                 return ret;
 
         }
-        private async Task<Customer> AddCustomer(CreditCardHolderInfo request)
+        public async Task<BankSlip> GerarCobrancaBoleto(RequestCobranca requestInvoice)
+        {
+            var customer = "";
+            var retor = await VerificaCustomer(requestInvoice.CustomerInfo.CpfCnpj);
+            if (retor.Data.Count == 0)
+                customer = AddCustomer(requestInvoice.CustomerInfo).Result.Id;
+
+            if (retor.Data.Count > 0)
+                customer = retor.Data.FirstOrDefault().Id;
+
+            requestInvoice.Customer = customer;
+
+            var request = new HttpRequestMessage(HttpMethod.Post, "payments");
+            request.Headers.Add("accept", "application/json");
+            request.Headers.Add("access_token", this.Token);
+            request.Content = JsonContent.Create(requestInvoice);
+            var response = await this.httpClient.SendAsync(request);
+            await this.CheckHttpResponseError(response);
+
+            var ret = await response.Content.ReadFromJsonAsync<BankSlip>();
+            
+            return ret;
+
+        }
+        public async Task<Pix> GerarPix(string idCobranca)
+        {
+            var requestCustomer = new HttpRequestMessage(HttpMethod.Get, $"payments/{idCobranca}/pixQrCode");
+            requestCustomer.Headers.Add("accept", "application/json");
+            requestCustomer.Headers.Add("access_token", this.Token);
+            var responseCustomer = await this.httpClient.SendAsync(requestCustomer);
+            var retor = await responseCustomer.Content.ReadFromJsonAsync<Pix>();
+            return retor;
+        }
+        private async Task<CustomerList> VerificaCustomer(string cpfCnpj)
+        {
+            var requestCustomer = new HttpRequestMessage(HttpMethod.Get, "customers?cpfCnpj=" + cpfCnpj);
+            requestCustomer.Headers.Add("accept", "application/json");
+            requestCustomer.Headers.Add("access_token", this.Token);
+            var responseCustomer = await this.httpClient.SendAsync(requestCustomer);
+            var retor = await responseCustomer.Content.ReadFromJsonAsync<CustomerList>();
+            return retor;
+        }
+        private async Task<Customer> AddCustomer(CustomerInfo request)
         {
             var requestCustomer = new HttpRequestMessage(HttpMethod.Post, "customers");
             requestCustomer.Headers.Add("accept", "application/json");

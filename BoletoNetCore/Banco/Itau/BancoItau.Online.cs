@@ -24,7 +24,7 @@ namespace BoletoNetCore
             throw new NotImplementedException();
         }
 
-        public Task<Payment> GerarCobrancaCartao(RequestCreditCard boleto)
+        public Task<PaymentCreditCardResponse> GerarCobrancaCartao(RequestCobranca boleto)
         {
             throw new NotImplementedException();
         }
@@ -39,6 +39,16 @@ namespace BoletoNetCore
         }
 
         public Task RegistrarBoleto(Boleto boleto)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<BankSlip> GerarCobrancaBoleto(RequestCobranca boleto)
+        {
+            throw new NotImplementedException();
+        }
+        
+        public Task<Pix> GerarPix(string idCobranca)
         {
             throw new NotImplementedException();
         }

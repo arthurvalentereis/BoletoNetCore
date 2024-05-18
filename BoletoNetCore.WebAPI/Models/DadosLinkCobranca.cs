@@ -22,6 +22,6 @@ namespace BoletoNetCore.WebAPI.Models
         //public string? UrlPagamentoSucesso { get; set; }
         //public bool? RedicionarAutomaticamente { get; set; }
         public LinkPagamentoRequest linkPagamento { get; set; }
-        public RequestCreditCard? RequestCreditCard { get; set; }
+        public RequestCobranca? RequestCobranca { get; set; }
     }
 }

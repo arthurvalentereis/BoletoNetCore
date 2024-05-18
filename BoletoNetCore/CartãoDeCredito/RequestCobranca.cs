@@ -1,6 +1,6 @@
 ﻿namespace BoletoNetCore.CartãoDeCredito
 {
-    public class RequestCreditCard
+    public class RequestCobranca
     {
         public string Customer { get; set; }  //
         public string BillingType { get; set; }  //
@@ -14,8 +14,8 @@
         public Fine Fine { get; set; } = new Fine(); 
         public Interest Interest { get; set; } = new Interest();  
         public CallBack CallBack { get; set; } = new CallBack();
-        public CreditCard CreditCard { get; set; } = new CreditCard();
-        public CreditCardHolderInfo CreditCardHolderInfo { get; set; } = new CreditCardHolderInfo();
+        public PaymentCreditCard CreditCard { get; set; } = new PaymentCreditCard();
+        public CustomerInfo CustomerInfo { get; set; } = new CustomerInfo();
         public string RemoteIp { get; set; }
     }
     public class Discount
@@ -40,7 +40,7 @@
         public string SuccessUrl { get; set; }  //
     }
 
-    public class CreditCard
+    public class PaymentCreditCard
     {
         public string HolderName { get; set;}
         public string Number { get; set;}
@@ -48,7 +48,7 @@
         public string ExpiryYear { get; set;}
         public string Ccv { get; set;}
     }
-    public class CreditCardHolderInfo
+    public class CustomerInfo
     {
         public string Name { get; set; }
         public string Email { get; set; }

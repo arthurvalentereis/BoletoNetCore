@@ -131,32 +131,19 @@ namespace BoletoNetCore.WebAPI.Controllers
                 switch (tipoCobranca)
                 {
                     case "LINK":
-                       
-
-                        var request = new LinkPagamentoRequest(banco);
-
-                        request.DataFinalLink = dadosBoleto.linkPagamento.DataFinalLink;
-                        request.NomeLinkCobranca = dadosBoleto.linkPagamento.NomeLinkCobranca;
-                        request.Descricao = dadosBoleto.linkPagamento.Descricao;
-                        request.TipoCobranca = dadosBoleto.linkPagamento.TipoCobranca;
-                        request.FormaCobranca = dadosBoleto.linkPagamento.FormaCobranca;
-                        request.Valor = dadosBoleto.linkPagamento.Valor;
-                        request.DataVencimentoLimite = dadosBoleto.linkPagamento.DataVencimentoLimite;
-                        request.DataFinalLink = dadosBoleto.linkPagamento.DataFinalLink;
-                        request.PeriodicidadeCobranca = dadosBoleto.linkPagamento.PeriodicidadeCobranca;
-                       // request.QuantidadeMaximaParcelamento = dadosBoleto.linkPagamento.QuantidadeMaxParcelamento;
-                        request.HabilitaNotificacao = dadosBoleto.linkPagamento.HabilitaNotificacao;
-                        request.UrlPagamentoSucesso = dadosBoleto.linkPagamento.UrlPagamentoSucesso;
-                        request.RedicionarAutomaticamente = dadosBoleto.linkPagamento.RedicionarAutomaticamente;
-
-                       var retornoLink = await b.GerarLinkPagamento(request);
+                        var retornoLink = await b.GerarLinkPagamento(dadosBoleto.linkPagamento);
                         return Ok(retornoLink);
                         break;
                     case "CREDIT_CARD":
-                         var retornoCard = await b.GerarCobrancaCartao(dadosBoleto.RequestCreditCard);
+                         var retornoCard = await b.GerarCobrancaCartao(dadosBoleto.RequestCobranca);
                         return Ok(retornoCard);
                         break;
                     case "PIX":
+                        break;
+                    case "BOLETO_API":
+                        var retornoBoletoApi = await b.GerarCobrancaBoleto(dadosBoleto.RequestCobranca);
+                        retornoBoletoApi.Pix = await b.GerarPix(retornoBoletoApi.Id);
+                        return Ok(retornoBoletoApi);
                         break;
                     case "BOLETO":
                         GerarBoletoBancos gerarBoletoBancos = new GerarBoletoBancos(Banco.Instancia(metodosUteis.RetornarBancoEmissor(tipoBancoEmissor)));
