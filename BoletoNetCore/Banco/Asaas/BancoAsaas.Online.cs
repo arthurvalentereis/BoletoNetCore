@@ -213,7 +213,7 @@ namespace BoletoNetCore
                     customer = retor.Data.FirstOrDefault().Id;
 
                 requestCreditCard.Customer = customer;
-
+                requestCreditCard.CreditCardHolderInfo = await TrataInfoCartao(requestCreditCard.CustomerInfo);
                 var request = new HttpRequestMessage(HttpMethod.Post, "payments");
                 request.Headers.Add("accept", "application/json");
                 request.Headers.Add("access_token", this.Token);
@@ -266,6 +266,18 @@ namespace BoletoNetCore
             var responseCustomer = await this.httpClient.SendAsync(requestCustomer);
             var retor = await responseCustomer.Content.ReadFromJsonAsync<CustomerList>();
             return retor;
+        }
+        private async Task<CreditCardHolderInfo> TrataInfoCartao(CustomerInfo info)
+        {
+            var response = new CreditCardHolderInfo();
+            response.CpfCnpj = info.CpfCnpj;
+            response.Phone = info.Phone;
+            response.AddressNumber = info.AddressNumber;
+            response.AddressComplement = info.AddressComplement;
+            response.Email = info.Email;
+            response.Name = info.Name;
+            response.PostalCode = info.PostalCode;
+            return response;
         }
         private async Task<Customer> AddCustomer(CustomerInfo request)
         {

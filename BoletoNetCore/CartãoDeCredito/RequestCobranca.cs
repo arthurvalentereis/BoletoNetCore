@@ -16,6 +16,7 @@
         public CallBack CallBack { get; set; } = new CallBack();
         public PaymentCreditCard CreditCard { get; set; } = new PaymentCreditCard();
         public CustomerInfo CustomerInfo { get; set; } = new CustomerInfo();
+        public CreditCardHolderInfo CreditCardHolderInfo { get; set; } = new CreditCardHolderInfo();
         public string RemoteIp { get; set; }
     }
     public class Discount
@@ -49,6 +50,16 @@
         public string Ccv { get; set;}
     }
     public class CustomerInfo
+    {
+        public string Name { get; set; }
+        public string Email { get; set; }
+        public string CpfCnpj { get; set; }
+        public string PostalCode { get; set; }
+        public string AddressNumber { get; set; }
+        public string AddressComplement { get; set; }
+        public string Phone { get; set; }
+    }
+    public class CreditCardHolderInfo
     {
         public string Name { get; set; }
         public string Email { get; set; }
