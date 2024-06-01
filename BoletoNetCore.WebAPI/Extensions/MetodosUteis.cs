@@ -39,6 +39,10 @@ namespace BoletoNetCore.WebAPI.Extensions
                     return Bancos.Itau;
                 case 422:
                     return Bancos.Safra;
+                case 461:
+                    return Bancos.Asaas;
+                case 637:
+                    return Bancos.Sofisa;
                 case 748:
                     return Bancos.Sicredi;
                 case 756:

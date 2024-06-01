@@ -24,6 +24,7 @@ namespace BoletoNetCore
             [756] = BancoSicoob.Instance,
             [097] = BancoCrediSIS.Instance,
             [077] = BancoInter.Instance,
+            [461] = BancoAsaas.Instance,
             [637] = BancoSofisa.Instance
         };
 

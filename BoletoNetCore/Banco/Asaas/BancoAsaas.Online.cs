@@ -1,15 +1,19 @@
-using BoletoNetCore.CartãoDeCredito;
-using BoletoNetCore.LinkPagamento;
-using System;
-using System.Net;
-using System.Net.Http;
-using System.Net.Http.Headers;
+﻿using System;
 using System.Net.Http.Json;
+using System.Net.Http;
+using System.Net;
 using System.Threading.Tasks;
+using BoletoNetCore.LinkPagamento;
+using System.Collections.Generic;
+using System.Drawing;
+using BoletoNetCore.Extensions;
+using BoletoNetCore.CartãoDeCredito;
+using BoletoNetCore.Clientes;
+using System.Linq;
 
 namespace BoletoNetCore
 {
-    partial class BancoSicredi : IBancoOnlineRest
+    partial class BancoAsaas : IBancoOnlineRest
     {
         #region HttpClient
         private HttpClient _httpClient;
@@ -20,7 +24,7 @@ namespace BoletoNetCore
                 if (this._httpClient == null)
                 {
                     this._httpClient = new HttpClient();
-                    this._httpClient.BaseAddress = new Uri("https://cobrancaonline.sicredi.com.br/sicredi-cobranca-ws-ecomm-api/ecomm/v1/boleto/");
+                    this._httpClient.BaseAddress = new Uri("https://sandbox.asaas.com/api/v3/");
                 }
 
                 return this._httpClient;
@@ -30,7 +34,7 @@ namespace BoletoNetCore
 
         #region Chaves de Acesso Api
 
-        // Chave Master que deve ser gerada pelo portal do sicredi
+        // Chave Master que deve ser gerada pelo portal do Asaas
         // Menu Cobrança, Sub Menu Lateral Código de Acesso / Gerar
         public string ChaveApi { get; set; }
 
@@ -41,25 +45,27 @@ namespace BoletoNetCore
 
         #endregion
 
-        public async Task<string> GerarToken()
+        public BancoAsaas(string chaveApi)
         {
-            var request = new HttpRequestMessage(HttpMethod.Post, "autenticacao");
-            request.Headers.Add("token", this.ChaveApi);
+            Codigo = 461;
+            Nome = "ASAAS";
+            Digito = "0";
+            ChaveApi = chaveApi;
+        }
 
-            var response = await this.httpClient.SendAsync(request);
-            await this.CheckHttpResponseError(response);
-            var ret = await response.Content.ReadFromJsonAsync<ChaveTransacaoSicrediApi>();
-            this.Token = ret.ChaveTransacao;
-            return ret.ChaveTransacao;
+        public Task<string> GerarToken()
+        {
+            this.Token = this.ChaveApi;
+            return Task.FromResult(this.Token);
         }
 
         public async Task RegistrarBoleto(Boleto boleto)
         {
-            var emissao = new EmissaoBoletoSicrediApi();
+            var emissao = new EmissaoBoletoAsaasApiRequest();
             emissao.Agencia = boleto.Banco.Beneficiario.ContaBancaria.Agencia;
             emissao.Posto = boleto.Banco.Beneficiario.ContaBancaria.DigitoAgencia;
             emissao.Cedente = boleto.Banco.Beneficiario.Codigo;
-            emissao.NossoNumero = boleto.NossoNumero+boleto.NossoNumeroDV;
+            emissao.NossoNumero = boleto.NossoNumero + boleto.NossoNumeroDV;
             emissao.TipoPessoa = boleto.Pagador.TipoCPFCNPJ("0");
             emissao.CpfCnpj = boleto.Pagador.CPFCNPJ;
             emissao.Nome = boleto.Pagador.Nome;
@@ -95,14 +101,14 @@ namespace BoletoNetCore
             emissao.Mensagem = boleto.MensagemInstrucoesCaixaFormatado;
             emissao.NumDiasNegativacaoAuto = boleto.DiasProtesto;
 
-            var request = new HttpRequestMessage(HttpMethod.Post, "emissao");
-            request.Headers.Add("token", this.Token);
+            var request = new HttpRequestMessage(HttpMethod.Post, "payments");
+            request.Headers.Add("access_token", this.Token);
             request.Content = JsonContent.Create(emissao);
             var response = await this.httpClient.SendAsync(request);
             await this.CheckHttpResponseError(response);
 
-            // todo: verificar a necessidade de preencher dados do boleto com o retorno do sicredi
-            var boletoEmitido = await response.Content.ReadFromJsonAsync<BoletoEmitidoSicrediApi>();
+            // todo: verificar a necessidade de preencher dados do boleto com o retorno do Asaas
+            var boletoEmitido = await response.Content.ReadFromJsonAsync<BoletoEmitidoAsaasApi>();
             boletoEmitido.LinhaDigitável.ToString();
             boletoEmitido.CodigoBarra.ToString();
         }
@@ -114,8 +120,9 @@ namespace BoletoNetCore
 
             if (response.StatusCode == HttpStatusCode.BadRequest || (response.StatusCode == HttpStatusCode.NotFound && response.Content.Headers.ContentType.MediaType == "application/json"))
             {
-                var bad = await response.Content.ReadFromJsonAsync<BadRequestSicrediApi>();
-                throw new Exception(string.Format("{0} {1}", bad.Parametro, bad.Mensagem).Trim());
+                var teste = response.Content.ReadAsStringAsync();
+                var bad = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+                throw new Exception(string.Format("{0} {1}", bad.Errors[0].Code, bad.Errors[0].Description).Trim());
             }
             else
                 throw new Exception(string.Format("Erro desconhecido: {0}", response.StatusCode));
@@ -126,7 +133,7 @@ namespace BoletoNetCore
             var agencia = boleto.Banco.Beneficiario.ContaBancaria.Agencia;
             var posto = boleto.Banco.Beneficiario.ContaBancaria.DigitoAgencia;
             var cedente = boleto.Banco.Beneficiario.Codigo;
-            var nossoNumero = boleto.NossoNumero+boleto.NossoNumeroDV;
+            var nossoNumero = boleto.NossoNumero + boleto.NossoNumeroDV;
 
             // existem outros parametros no manual para consulta de multiplos boletos
             var url = string.Format("consulta?agencia={0}&cedente={1}&posto={2}&nossoNumero={3}", agencia, cedente, posto, nossoNumero);
@@ -135,37 +142,160 @@ namespace BoletoNetCore
             request.Headers.Add("token", this.Token);
             var response = await this.httpClient.SendAsync(request);
             await this.CheckHttpResponseError(response);
-            var ret = await response.Content.ReadFromJsonAsync<RetornoConsultaBoletoSicrediApi[]>();
+            var ret = await response.Content.ReadFromJsonAsync<RetornoConsultaBoletoAsaasApi[]>();
 
             // todo: verificar quais dados necessarios para preencher boleto
             ret[0].Situacao.ToString();
         }
 
-       
+        public async Task<LinkPagamentoResponse> GerarLinkPagamento(LinkPagamentoRequest linkPagamento)
+        {
 
-        public Task<PaymentCreditCardResponse> GerarCobrancaCartao(RequestCobranca boleto)
-        {
-            throw new NotImplementedException();
-        }
+            var linkPagamentoAsaasRequest = new LinkPagamentoAsaasRequest();
+            linkPagamentoAsaasRequest.endDate = linkPagamento.DataFinalLink.ToString("yyyy-MM-dd");
+            linkPagamentoAsaasRequest.name = linkPagamento.NomeLinkCobranca;
+            linkPagamentoAsaasRequest.description = linkPagamento.Descricao;
+            linkPagamentoAsaasRequest.billingType = linkPagamento.FormaCobranca;
+            linkPagamentoAsaasRequest.chargeType = linkPagamento.TipoCobranca;
+            linkPagamentoAsaasRequest.value = linkPagamento.Valor;
+            linkPagamentoAsaasRequest.dueDateLimitDays = linkPagamento.DataVencimentoLimite;
+            linkPagamentoAsaasRequest.subscriptionCycle = linkPagamento.PeriodicidadeCobranca;
+            linkPagamentoAsaasRequest.maxInstallmentCount = linkPagamento.QuantidadeMaximaParcelamento;
+            linkPagamentoAsaasRequest.notificationEnabled = linkPagamento.HabilitaNotificacao;
+            linkPagamentoAsaasRequest.callback = new LinkPagamentoAsaasCallbackRequest()
+            {
+                autoRedirect = linkPagamento.RedicionarAutomaticamente,
+                successUrl = linkPagamento.UrlPagamentoSucesso
+            };
 
-        public Task<LinkPagamentoResponse> GerarLinkPagamento(LinkPagamentoRequest boleto)
-        {
-            throw new NotImplementedException();
-        }
 
-        public Task<BankSlip> GerarCobrancaBoleto(RequestCobranca boleto)
-        {
-            throw new NotImplementedException();
+
+            var request = new HttpRequestMessage(HttpMethod.Post, "paymentLinks");
+            request.Headers.Add("accept", "application/json");
+            request.Headers.Add("access_token", this.Token);
+            request.Content = JsonContent.Create(linkPagamentoAsaasRequest);
+            var response = await this.httpClient.SendAsync(request);
+            await this.CheckHttpResponseError(response);
+
+            var ret = await response.Content.ReadFromJsonAsync<LinkPagamentoAsaasResponse>();
+
+            var linkPagamentoResponse = new LinkPagamentoResponse();
+            // todo: verificar quais dados necessarios para preencher linkpagamentoresponse
+            linkPagamentoResponse.Id = ret.id;
+            linkPagamentoResponse.FormaPagamento = ret.billingType;
+            linkPagamentoResponse.FormaCobranca = ret.chargeType;
+            linkPagamentoResponse.UrlLink = ret.url;
+            linkPagamentoResponse.NomeLink = ret.name;
+            linkPagamentoResponse.StatusLink = ret.active;
+            linkPagamentoResponse.DataFinal = ret.endDate;
+            linkPagamentoResponse.Descricao = ret.description;
+            linkPagamentoResponse.Deletado = ret.deleted;
+            linkPagamentoResponse.Visualizacoes = ret.viewCount;
+            linkPagamentoResponse.Valor = ret.value;
+            linkPagamentoResponse.Periodicidade = ret.subscriptionCycle;
+            linkPagamentoResponse.QtdMaximaParcelas = ret.maxInstallmentCount;
+            linkPagamentoResponse.DiasUteisBoleto = ret.dueDateLimitDays;
+            linkPagamentoResponse.NotificacaoAtivada = ret.notificationEnabled;
+
+
+            return linkPagamentoResponse;
+
         }
-        public Task<Pix> GerarPix(string idCobranca)
+        public async Task<PaymentCreditCardResponse> GerarCobrancaCartao(RequestCobranca requestCreditCard)
         {
-            throw new NotImplementedException();
+                var customer = "";
+                var retor = await VerificaCustomer(requestCreditCard.CustomerInfo.CpfCnpj);
+
+                if (retor.Data.Count == 0)
+                    customer = AddCustomer(requestCreditCard.CustomerInfo).Result.Id;
+
+                if (retor.Data.Count > 0)
+                    customer = retor.Data.FirstOrDefault().Id;
+
+                requestCreditCard.Customer = customer;
+                requestCreditCard.CreditCardHolderInfo = await TrataInfoCartao(requestCreditCard.CustomerInfo);
+                var request = new HttpRequestMessage(HttpMethod.Post, "payments");
+                request.Headers.Add("accept", "application/json");
+                request.Headers.Add("access_token", this.Token);
+                request.Content = JsonContent.Create(requestCreditCard);
+                var response = await this.httpClient.SendAsync(request);
+                await this.CheckHttpResponseError(response);
+
+                var ret = await response.Content.ReadFromJsonAsync<PaymentCreditCardResponse>();
+                return ret;
+
+        }
+        public async Task<BankSlip> GerarCobrancaBoleto(RequestCobranca requestInvoice)
+        {
+            var customer = "";
+            var retor = await VerificaCustomer(requestInvoice.CustomerInfo.CpfCnpj);
+            if (retor.Data.Count == 0)
+                customer = AddCustomer(requestInvoice.CustomerInfo).Result.Id;
+
+            if (retor.Data.Count > 0)
+                customer = retor.Data.FirstOrDefault().Id;
+
+            requestInvoice.Customer = customer;
+
+            var request = new HttpRequestMessage(HttpMethod.Post, "payments");
+            request.Headers.Add("accept", "application/json");
+            request.Headers.Add("access_token", this.Token);
+            request.Content = JsonContent.Create(requestInvoice);
+            var response = await this.httpClient.SendAsync(request);
+            await this.CheckHttpResponseError(response);
+
+            var ret = await response.Content.ReadFromJsonAsync<BankSlip>();
+            
+            return ret;
+
+        }
+        public async Task<Pix> GerarPix(string idCobranca)
+        {
+            var requestCustomer = new HttpRequestMessage(HttpMethod.Get, $"payments/{idCobranca}/pixQrCode");
+            requestCustomer.Headers.Add("accept", "application/json");
+            requestCustomer.Headers.Add("access_token", this.Token);
+            var responseCustomer = await this.httpClient.SendAsync(requestCustomer);
+            var retor = await responseCustomer.Content.ReadFromJsonAsync<Pix>();
+            return retor;
+        }
+        private async Task<CustomerList> VerificaCustomer(string cpfCnpj)
+        {
+            var requestCustomer = new HttpRequestMessage(HttpMethod.Get, "customers?cpfCnpj=" + cpfCnpj);
+            requestCustomer.Headers.Add("accept", "application/json");
+            requestCustomer.Headers.Add("access_token", this.Token);
+            var responseCustomer = await this.httpClient.SendAsync(requestCustomer);
+            var retor = await responseCustomer.Content.ReadFromJsonAsync<CustomerList>();
+            return retor;
+        }
+        private async Task<CreditCardHolderInfo> TrataInfoCartao(CustomerInfo info)
+        {
+            var response = new CreditCardHolderInfo();
+            response.CpfCnpj = info.CpfCnpj;
+            response.Phone = info.Phone;
+            response.AddressNumber = info.AddressNumber;
+            response.AddressComplement = info.AddressComplement;
+            response.Email = info.Email;
+            response.Name = info.Name;
+            response.PostalCode = info.PostalCode;
+            return response;
+        }
+        private async Task<Customer> AddCustomer(CustomerInfo request)
+        {
+            var requestCustomer = new HttpRequestMessage(HttpMethod.Post, "customers");
+            requestCustomer.Headers.Add("accept", "application/json");
+            requestCustomer.Headers.Add("access_token", this.Token);
+            requestCustomer.Content = JsonContent.Create(request);
+            var response = await this.httpClient.SendAsync(requestCustomer);
+            await this.CheckHttpResponseError(response);
+
+            var ret = await response.Content.ReadFromJsonAsync<Customer>();
+            return ret;
         }
     }
 
-    #region Classes Auxiliares (json) Sicredi
+    #region Classes Auxiliares (json) Asaas
 
-    class InstrucaoSicrediApi
+    class InstrucaoAsaasApi
     {
         public string Agencia { get; set; }
         public string Posto { get; set; }
@@ -196,20 +326,30 @@ namespace BoletoNetCore
         public string ComplementoInstrucao { get; set; }
     }
 
-    class BadRequestSicrediApi
+    class BadRequestAsaasApi
     {
         public string Codigo { get; set; }
         public string Mensagem { get; set; }
         public string Parametro { get; set; }
     }
+    class Error
+    {
+        public string Code { get; set; }
+        public string Description { get; set; }
+    }
 
-    class ChaveTransacaoSicrediApi
+    class ErrorResponse
+    {
+        public List<Error> Errors { get; set; }
+    }
+
+    class ChaveTransacaoAsaasApi
     {
         public string ChaveTransacao { get; set; }
         public DateTime dataExpiracao { get; set; }
     }
 
-    class RetornoConsultaBoletoSicrediApi
+    class RetornoConsultaBoletoAsaasApi
     {
         public string SeuNumero { get; set; }
         public string NossoNumero { get; set; }
@@ -222,7 +362,7 @@ namespace BoletoNetCore
         public string Situacao { get; set; }
     }
 
-    class BoletoEmitidoSicrediApi
+    class BoletoEmitidoAsaasApi
     {
         public string LinhaDigitável { get; set; }
         public string CodigoBanco { get; set; }
@@ -252,7 +392,7 @@ namespace BoletoNetCore
         public string CodigoBarra { get; set; }
     }
 
-    class EmissaoBoletoSicrediApi
+    class EmissaoBoletoAsaasApiRequest
     {
         public string Agencia { get; set; }
         public string Posto { get; set; }

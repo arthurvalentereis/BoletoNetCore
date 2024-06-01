@@ -23,9 +23,9 @@ namespace BoletoNetCore
         public void FormataBeneficiario()
         {
             ContaBancaria contaBancaria = Beneficiario.ContaBancaria;
-            if (!CarteiraFactory<BancoCecred>.CarteiraEstaImplementada(contaBancaria.CarteiraComVariacaoPadrao))
+            if (!CarteiraFactory<BancoSofisa>.CarteiraEstaImplementada(contaBancaria.CarteiraComVariacaoPadrao))
                 throw BoletoNetCoreException.CarteiraNaoImplementada(contaBancaria.CarteiraComVariacaoPadrao);
-            contaBancaria.FormatarDados("Pagar preferencialmente nas cooperativas do Sistema Ailos.", "", "", 7);
+            contaBancaria.FormatarDados("ATÉ O VENCIMENTO EM QUALQUER BANCO. APÓS O VENCIMENTO SOMENTE NO SOFISA", "", "", 7);
             Beneficiario.CodigoFormatado = contaBancaria.Agencia + "-" + contaBancaria.DigitoAgencia + "    " + Beneficiario.ContaBancaria.Conta + "-" + Beneficiario.ContaBancaria.DigitoConta;
         }
 

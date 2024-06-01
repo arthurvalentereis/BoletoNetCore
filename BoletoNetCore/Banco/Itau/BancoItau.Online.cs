@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using BoletoNetCore.CartãoDeCredito;
 using BoletoNetCore.Exceptions;
+using BoletoNetCore.LinkPagamento;
 using static System.String;
 
 namespace BoletoNetCore
@@ -16,6 +18,17 @@ namespace BoletoNetCore
             throw new NotImplementedException();
         }
 
+       
+        public Task<LinkPagamentoResponse> GerarLinkPagamento(LinkPagamentoRequest boleto)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<PaymentCreditCardResponse> GerarCobrancaCartao(RequestCobranca boleto)
+        {
+            throw new NotImplementedException();
+        }
+
         /// <summary>
         /// TODO: Necessário verificar quais os métodos necessários
         /// </summary>
@@ -26,6 +39,16 @@ namespace BoletoNetCore
         }
 
         public Task RegistrarBoleto(Boleto boleto)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<BankSlip> GerarCobrancaBoleto(RequestCobranca boleto)
+        {
+            throw new NotImplementedException();
+        }
+        
+        public Task<Pix> GerarPix(string idCobranca)
         {
             throw new NotImplementedException();
         }
