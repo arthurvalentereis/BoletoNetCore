@@ -24,7 +24,7 @@ namespace BoletoNetCore
                 if (this._httpClient == null)
                 {
                     this._httpClient = new HttpClient();
-                    this._httpClient.BaseAddress = new Uri("https://sandbox.asaas.com/api/v3/");
+                    this._httpClient.BaseAddress = new Uri("https://api.asaas.com/api/v3/");
                 }
 
                 return this._httpClient;
