@@ -10,6 +10,7 @@ using BoletoNetCore.Extensions;
 using BoletoNetCore.CartãoDeCredito;
 using BoletoNetCore.Clientes;
 using System.Linq;
+using Leader.Infrasctruture.Repositories.Base;
 
 namespace BoletoNetCore
 {
@@ -24,7 +25,10 @@ namespace BoletoNetCore
                 if (this._httpClient == null)
                 {
                     this._httpClient = new HttpClient();
-                    this._httpClient.BaseAddress = new Uri("https://sandbox.asaas.com/api/v3/");
+                    //this._httpClient.BaseAddress = new Uri("https://sandbox.asaas.com/api/v3/");// Homologação
+                    this._httpClient.BaseAddress = new Uri("https://api.asaas.com/v3/");//Prod
+                    
+                    this._httpClient.DefaultRequestHeaders.Add("accept", "application/json");
                 }
 
                 return this._httpClient;
@@ -56,6 +60,7 @@ namespace BoletoNetCore
         public Task<string> GerarToken()
         {
             this.Token = this.ChaveApi;
+            this._httpClient.DefaultRequestHeaders.Add("access_token", this.Token);
             return Task.FromResult(this.Token);
         }
 
@@ -238,15 +243,12 @@ namespace BoletoNetCore
             requestInvoice.Customer = customer;
 
             var request = new HttpRequestMessage(HttpMethod.Post, "payments");
-            request.Headers.Add("accept", "application/json");
-            request.Headers.Add("access_token", this.Token);
             request.Content = JsonContent.Create(requestInvoice);
-            var response = await this.httpClient.SendAsync(request);
-            await this.CheckHttpResponseError(response);
+            var retorno = await AbstractProxy.GenericRequest<BankSlip>(this.httpClient, request);
 
-            var ret = await response.Content.ReadFromJsonAsync<BankSlip>();
+            //var ret = await response.Content.ReadFromJsonAsync<BankSlip>();
             
-            return ret;
+            return retorno;
 
         }
         public async Task<Pix> GerarPix(string idCobranca)
@@ -259,12 +261,19 @@ namespace BoletoNetCore
             return retor;
         }
         private async Task<CustomerList> VerificaCustomer(string cpfCnpj)
-        {
-            var requestCustomer = new HttpRequestMessage(HttpMethod.Get, "customers?cpfCnpj=" + cpfCnpj);
-            requestCustomer.Headers.Add("accept", "application/json");
-            requestCustomer.Headers.Add("access_token", this.Token);
-            var responseCustomer = await this.httpClient.SendAsync(requestCustomer);
-            var retor = await responseCustomer.Content.ReadFromJsonAsync<CustomerList>();
+        {   
+            
+            var url = $"customers?cpfCnpj={cpfCnpj}";
+            //var requestCustomer = new HttpRequestMessage(HttpMethod.Get, "customers?cpfCnpj=" + cpfCnpj);
+            var requestCustomer = new HttpRequestMessage(HttpMethod.Get, url);
+            //requestCustomer.Headers.Add("accept", "application/json");
+            //requestCustomer.Headers.Add("access_token", this.Token);
+            var retor = await AbstractProxy.GenericRequest<CustomerList>(this.httpClient, requestCustomer);
+            //var responseCustomer = await this.httpClient.SendAsync(requestCustomer);
+            //if (responseCustomer.StatusCode == HttpStatusCode.Unauthorized)
+            //    throw new UnauthorizedAccessException(responseCustomer.StatusCode.ToString());
+
+            //var retor = await responseCustomer.Content.ReadFromJsonAsync<CustomerList>();
             return retor;
         }
         private async Task<CreditCardHolderInfo> TrataInfoCartao(CustomerInfo info)
@@ -282,14 +291,14 @@ namespace BoletoNetCore
         private async Task<Customer> AddCustomer(CustomerInfo request)
         {
             var requestCustomer = new HttpRequestMessage(HttpMethod.Post, "customers");
-            requestCustomer.Headers.Add("accept", "application/json");
-            requestCustomer.Headers.Add("access_token", this.Token);
             requestCustomer.Content = JsonContent.Create(request);
-            var response = await this.httpClient.SendAsync(requestCustomer);
-            await this.CheckHttpResponseError(response);
+            var retor = await AbstractProxy.GenericRequest<Customer>(this.httpClient, requestCustomer);
+            
+            //var response = await this.httpClient.SendAsync(requestCustomer);
+            //await this.CheckHttpResponseError(response);
 
-            var ret = await response.Content.ReadFromJsonAsync<Customer>();
-            return ret;
+            //var ret = await response.Content.ReadFromJsonAsync<Customer>();
+            return retor;
         }
     }
 
@@ -331,6 +340,10 @@ namespace BoletoNetCore
         public string Codigo { get; set; }
         public string Mensagem { get; set; }
         public string Parametro { get; set; }
+    }
+    class ResponseErrorModel
+    {
+        public string message { get; set; }
     }
     class Error
     {
