@@ -220,14 +220,11 @@ namespace BoletoNetCore
                 requestCreditCard.Customer = customer;
                 requestCreditCard.CreditCardHolderInfo = await TrataInfoCartao(requestCreditCard.CustomerInfo);
                 var request = new HttpRequestMessage(HttpMethod.Post, "payments");
-                request.Headers.Add("accept", "application/json");
-                request.Headers.Add("access_token", this.Token);
                 request.Content = JsonContent.Create(requestCreditCard);
-                var response = await this.httpClient.SendAsync(request);
-                await this.CheckHttpResponseError(response);
+                var retorno = await AbstractProxy.GenericRequest<PaymentCreditCardResponse>(this.httpClient, request);
 
-                var ret = await response.Content.ReadFromJsonAsync<PaymentCreditCardResponse>();
-                return ret;
+            //var ret = await response.Content.ReadFromJsonAsync<PaymentCreditCardResponse>();
+                return retorno;
 
         }
         public async Task<BankSlip> GerarCobrancaBoleto(RequestCobranca requestInvoice)
