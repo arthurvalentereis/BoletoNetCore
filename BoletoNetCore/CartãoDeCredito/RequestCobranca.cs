@@ -10,6 +10,7 @@
         public string ExternalReference { get; set; }  //
         public int? InstallmentCount { get; set; }  //
         public decimal? InstallmentValue { get; set; }  //
+        public bool? PostalService { get; set; } = false;//
         public Discount Discount { get; set; } = new Discount();
         public Fine Fine { get; set; } = new Fine(); 
         public Interest Interest { get; set; } = new Interest();  
@@ -58,6 +59,7 @@
         public string AddressNumber { get; set; }
         public string AddressComplement { get; set; }
         public string Phone { get; set; }
+        public bool NotificationDisabled { get; set; } = true;
     }
     public class CreditCardHolderInfo
     {
