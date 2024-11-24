@@ -127,7 +127,7 @@ namespace BoletoNetCore.WebAPI.Controllers
                 var banco = Banco.Instancia(metodosUteis.RetornarBancoEmissor(tipoBancoEmissor));
                 IBancoOnlineRest b = (IBancoOnlineRest)banco;
                 b.ChaveApi = chaveApi;
-                b.GerarToken();
+                await b.GerarToken();
                 switch (tipoCobranca)
                 {
                     case "LINK":
