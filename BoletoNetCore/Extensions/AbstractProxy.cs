@@ -136,8 +136,8 @@ namespace Leader.Infrasctruture.Repositories.Base
                 //        break;
                 //    default:
                 responseError = response.Content.ReadAsStringAsync().Result;
-                var erro = JsonConvert.DeserializeObject<ResponseErrorModel>(responseError);
-                customResponseError = erro.message;
+                var erro = JsonConvert.DeserializeObject<ErrorResponse>(responseError);
+                customResponseError = erro.Errors.FirstOrDefault().Description;
                 //        break;
                 //}
                 throw new ApplicationException(customResponseError);
